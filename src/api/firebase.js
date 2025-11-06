@@ -13,14 +13,15 @@ import {
 
 // a week before pre-deploy please delete current firebase auth, and create new one with API security
 const firebaseConfig = {
-  apiKey: "AIzaSyD5IEq63jmhZZgnYoeMpCFFHLbbBWhUn3Q",
-  authDomain: "jomnam-userauth.firebaseapp.com",
-  projectId: "jomnam-userauth",
-  storageBucket: "jomnam-userauth.firebasestorage.app",
-  messagingSenderId: "875853823801",
-  appId: "1:875853823801:web:1d4c53df8eb5e8bb2db2e8",
-  measurementId: "G-4ZYWLYGQ7M",
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID,
 };
+
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
