@@ -1,49 +1,57 @@
+import { Suspense, lazy } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
-import Dashboard from "./pages/Dashboard";
-import Teams from "./pages/Teams";
-import Projects from "./pages/Projects";
-import Profile from "./pages/Profile";
-import Login from "./pages/Login";
 import Sidebar from "./components/Sidebar";
+import Loader from "./components/Loading";
 import { useAuth, AuthProvider } from "./context/AuthContext";
 
-import Loader from "./components/Loading";
+// Lazy load pages
+const Dashboard = lazy(() => import("./pages/Dashboard"));
+const Teams = lazy(() => import("./pages/Teams"));
+const Projects = lazy(() => import("./pages/Projects"));
+const Profile = lazy(() => import("./pages/Profile"));
+const Login = lazy(() => import("./pages/Login"));
 
 const AppRoutes = () => {
   const { user, loading } = useAuth();
 
+  // Show loader while checking auth
   if (loading) return <Loader />;
 
   return (
-    <Routes>
-      <Route
-        path="/login"
-        element={!user ? <Login /> : <Navigate to="/" replace />}
-      />
-
-      {user && (
+    <Suspense fallback={<Loader />}>
+      <Routes>
+        {/* Public route */}
         <Route
-          path="*"
-          element={
-            <div className="flex">
-              <Sidebar />
-              <div className="flex-1 p-6 bg-gray-100 min-h-screen">
-                <Routes>
-                  <Route path="/" element={<Dashboard />} />
-                  <Route path="/dashboard" element={<Dashboard />} />
-                  <Route path="/teams" element={<Teams />} />
-                  <Route path="/projects" element={<Projects />} />
-                  <Route path="/profile" element={<Profile />} />
-                </Routes>
-              </div>
-            </div>
-          }
+          path="/login"
+          element={!user ? <Login /> : <Navigate to="/" replace />}
         />
-      )}
 
-      {!user && <Route path="*" element={<Navigate to="/login" replace />} />}
-      {user && <Route path="*" element={<Navigate to="/" replace />} />}
-    </Routes>
+        {/* Protected routes */}
+        {user && (
+          <Route
+            path="*"
+            element={
+              <div className="flex">
+                <Sidebar />
+                <div className="flex-1 p-6 bg-gray-100 min-h-screen">
+                  <Routes>
+                    <Route path="/" element={<Dashboard />} />
+                    <Route path="/dashboard" element={<Dashboard />} />
+                    <Route path="/teams" element={<Teams />} />
+                    <Route path="/projects" element={<Projects />} />
+                    <Route path="/profile" element={<Profile />} />
+                    <Route path="*" element={<Navigate to="/" replace />} />
+                  </Routes>
+                </div>
+              </div>
+            }
+          />
+        )}
+
+        {/* Redirect if not authenticated */}
+        {!user && <Route path="*" element={<Navigate to="/login" replace />} />}
+      </Routes>
+    </Suspense>
   );
 };
 
