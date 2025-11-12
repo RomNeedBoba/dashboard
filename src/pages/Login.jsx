@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useNavigate } from 'react-router-dom';
 import {
   auth,
   googleProvider,
@@ -9,25 +10,42 @@ import {
   createUserWithEmailAndPassword,
   sendEmailVerification,
 } from "../api/firebase";
+import { createOrUpdateUser } from '../api/userApi';
 import "../theme/pages/LoginRegister.css";
 
 export default function Login() {
-  const [step, setStep] = useState("choose"); // choose, email, password
+  const navigate = useNavigate();
+  const [step, setStep] = useState("choose");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [existingProvider, setExistingProvider] = useState(null); // 'google', 'github', or null
+  const [existingProvider, setExistingProvider] = useState(null);
   const [isExistingUser, setIsExistingUser] = useState(false);
   const [message, setMessage] = useState("");
-  const [messageType, setMessageType] = useState("info"); // 'info', 'error', 'success'
+  const [messageType, setMessageType] = useState("info");
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+
+  const syncUserToBackend = async (firebaseUser) => {
+    try {
+      await createOrUpdateUser({
+        uid: firebaseUser.uid,
+        email: firebaseUser.email,
+        name: firebaseUser.displayName || firebaseUser.email.split('@')[0]
+      });
+      console.log('User synced to backend');
+      navigate('/dashboard');
+    } catch (error) {
+      console.error('Failed to sync user:', error);
+    }
+  };
 
   const handleSocialLogin = async (providerName) => {
     setLoading(true);
     setMessage("");
     try {
       const provider = providerName === "google" ? googleProvider : githubProvider;
-      await signInWithPopup(auth, provider);
+      const result = await signInWithPopup(auth, provider);
+      await syncUserToBackend(result.user);
       setMessageType("success");
       setMessage("Logged in successfully!");
     } catch (err) {
@@ -53,27 +71,21 @@ export default function Login() {
       const methods = await fetchSignInMethodsForEmail(auth, email);
       
       if (methods.length > 0) {
-        // Account exists - check which provider
         if (methods.includes("google.com") && !methods.includes("password")) {
           setExistingProvider("google");
           setMessageType("info");
-          setMessage(
-            `This email is registered with Google. Please use "Continue with Google" to sign in.`
-          );
+          setMessage(`This email is registered with Google. Please use "Continue with Google" to sign in.`);
           setStep("choose");
           setLoading(false);
           return;
         } else if (methods.includes("github.com") && !methods.includes("password")) {
           setExistingProvider("github");
           setMessageType("info");
-          setMessage(
-            `This email is registered with GitHub. Please use "Continue with GitHub" to sign in.`
-          );
+          setMessage(`This email is registered with GitHub. Please use "Continue with GitHub" to sign in.`);
           setStep("choose");
           setLoading(false);
           return;
         } else if (methods.includes("password")) {
-          // Email/password account exists (or linked with social)
           setExistingProvider(null);
           setIsExistingUser(true);
           setMessageType("info");
@@ -84,7 +96,6 @@ export default function Login() {
         }
       }
       
-      // No account exists - create new one
       setExistingProvider(null);
       setIsExistingUser(false);
       setMessageType("info");
@@ -105,22 +116,20 @@ export default function Login() {
 
     try {
       if (isExistingUser) {
-        // Sign in existing user
         const userCredential = await signInWithEmailAndPassword(auth, email, password);
         if (!userCredential.user.emailVerified) {
           setMessageType("error");
           setMessage("Please verify your email before logging in. Check your inbox.");
           await auth.signOut();
         } else {
+          await syncUserToBackend(userCredential.user);
           setMessageType("success");
           setMessage("Logged in successfully!");
         }
       } else {
-        // Check one more time before creating account
         const methods = await fetchSignInMethodsForEmail(auth, email);
         
         if (methods.length > 0) {
-          // Account exists with social provider
           if (methods.includes("google.com")) {
             setMessageType("error");
             setMessage("This email is already registered with Google. Please use 'Continue with Google' to sign in.");
@@ -139,12 +148,12 @@ export default function Login() {
           return;
         }
         
-        // Create new account
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         await sendEmailVerification(userCredential.user);
+        await syncUserToBackend(userCredential.user);
         await auth.signOut();
         setMessageType("success");
-        setMessage("Account created! Please check your email to verify before logging in.");
+        setMessage("Account created! Please verify your email before logging in.");
         setStep("email");
         setEmail("");
         setPassword("");
@@ -209,7 +218,6 @@ export default function Login() {
           </div>
         )}
 
-        {/* Step 1: Choose authentication method */}
         {step === "choose" && (
           <div className="button-stack">
             <button
@@ -255,7 +263,6 @@ export default function Login() {
           </div>
         )}
 
-        {/* Step 2: Enter email */}
         {step === "email" && (
           <>
             <div className="form-content">
@@ -285,7 +292,6 @@ export default function Login() {
           </>
         )}
 
-        {/* Step 3: Enter password */}
         {step === "password" && (
           <>
             <div className="form-content">

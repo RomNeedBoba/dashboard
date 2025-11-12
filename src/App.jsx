@@ -3,23 +3,31 @@ import { Routes, Route, Navigate } from "react-router-dom";
 import Sidebar from "./components/Sidebar";
 import Loader from "./components/Loading";
 import { useAuth, AuthProvider } from "./context/AuthContext";
+import { ToastProvider } from "./context/ToastContext";
+import GoogleAuthCallback from "./pages/GoogleAuthCallback";
+import OneDriveAuthCallback from "./pages/OneDriveAuthCallback";
+import './theme/root.css' 
 
 // Lazy load pages
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const Teams = lazy(() => import("./pages/Teams"));
 const Projects = lazy(() => import("./pages/Projects"));
+const ProjectMgmt = lazy(() => import("./pages/projectmgmt"));
 const Profile = lazy(() => import("./pages/Profile"));
 const Login = lazy(() => import("./pages/Login"));
 
 const AppRoutes = () => {
   const { user, loading } = useAuth();
 
-  // Show loader while checking auth
   if (loading) return <Loader />;
 
   return (
     <Suspense fallback={<Loader />}>
       <Routes>
+        {/* OAuth Callbacks - Public routes */}
+        <Route path="/auth/google/callback" element={<GoogleAuthCallback />} />
+        <Route path="/auth/onedrive/callback" element={<OneDriveAuthCallback />} />
+
         {/* Public route */}
         <Route
           path="/login"
@@ -39,6 +47,7 @@ const AppRoutes = () => {
                     <Route path="/dashboard" element={<Dashboard />} />
                     <Route path="/teams" element={<Teams />} />
                     <Route path="/projects" element={<Projects />} />
+                    <Route path="/project/:projectId" element={<ProjectMgmt />} />
                     <Route path="/profile" element={<Profile />} />
                     <Route path="*" element={<Navigate to="/" replace />} />
                   </Routes>
@@ -48,7 +57,6 @@ const AppRoutes = () => {
           />
         )}
 
-        {/* Redirect if not authenticated */}
         {!user && <Route path="*" element={<Navigate to="/login" replace />} />}
       </Routes>
     </Suspense>
@@ -58,7 +66,9 @@ const AppRoutes = () => {
 export default function App() {
   return (
     <AuthProvider>
-      <AppRoutes />
+      <ToastProvider>
+        <AppRoutes />
+      </ToastProvider>
     </AuthProvider>
   );
 }
